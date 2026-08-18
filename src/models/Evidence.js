@@ -16,7 +16,8 @@ const evidenceSchema = new mongoose.Schema(
     caseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Case', default: null },
 
     originalFilename: String,
-    storedPath: String, // path to the untouched original file
+    storedUrl: String, // permanent Cloudinary URL — the "original" file, never modified
+    cloudinaryPublicId: String,
     mimeType: String,
     fileSizeBytes: Number,
     sha256: { type: String, required: true, index: true },

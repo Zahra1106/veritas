@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-const fs = require('fs');
 
 /* -------------------------------------------------------------------------
  * 1) AI-GENERATED IMAGE DETECTION
@@ -8,7 +7,7 @@ const fs = require('fs');
  * Falls back to an "inconclusive" result if the API key is missing or the
  * call fails, rather than fabricating a confidence score.
  * ---------------------------------------------------------------------- */
-async function analyzeImageAI(filePath) {
+async function analyzeImageAI(imageUrl) {
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   const model = process.env.HF_IMAGE_MODEL || 'Organika/sdxl-detector';
 
@@ -22,7 +21,17 @@ async function analyzeImageAI(filePath) {
   }
 
   try {
-    const buffer = fs.readFileSync(filePath);
+    const imageRes = await fetch(imageUrl);
+    if (!imageRes.ok) {
+      return {
+        status: 'inconclusive',
+        reason: `Could not fetch stored image: ${imageRes.status}`,
+        aiGenerationProbability: null,
+        signals: ['Stored evidence file could not be retrieved for analysis.']
+      };
+    }
+    const buffer = await imageRes.buffer();
+
     const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
       method: 'POST',
       headers: {

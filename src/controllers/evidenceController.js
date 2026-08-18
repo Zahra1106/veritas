@@ -1,7 +1,8 @@
 const Evidence = require('../models/Evidence');
-const { sha256File } = require('../services/hashService');
+const { sha256Buffer } = require('../services/hashService');
 const { extractMetadata } = require('../services/metadataService');
 const { analyzeImageAI, analyzeTextRisk } = require('../services/aiService');
+const { uploadBuffer } = require('../services/cloudinaryService');
 const { randomCode } = require('../utils/codeGenerator');
 
 function mapEvidenceType(mimeType) {
@@ -13,15 +14,17 @@ function mapEvidenceType(mimeType) {
 }
 
 /**
- * Step 1: Upload evidence -> hash -> extract metadata -> create Evidence ID.
- * Analysis is NOT run automatically here; it's a separate step so heavy
- * files (video/audio) can be processed asynchronously.
+ * Step 1: Upload evidence -> hash -> extract metadata -> upload original to
+ * Cloudinary (permanent storage) -> create Evidence ID.
+ * Everything works off the in-memory buffer (multer memoryStorage) since
+ * Vercel's filesystem is read-only/ephemeral in production.
  */
 async function uploadEvidence(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const sha256 = await sha256File(req.file.path);
+    const buffer = req.file.buffer;
+    const sha256 = sha256Buffer(buffer);
 
     // Deduplication check via hash
     const duplicate = await Evidence.findOne({ sha256, owner: req.user.id });
@@ -32,13 +35,18 @@ async function uploadEvidence(req, res) {
       });
     }
 
-    const metadata = await extractMetadata(req.file.path, req.file.mimetype);
+    const metadata = await extractMetadata(buffer, req.file.mimetype, req.file.size);
+
+    const cloudinaryResult = await uploadBuffer(buffer, {
+      originalFilename: req.file.originalname
+    });
 
     const evidence = await Evidence.create({
       evidenceCode: randomCode('EV'),
       owner: req.user.id,
       originalFilename: req.file.originalname,
-      storedPath: req.file.path,
+      storedUrl: cloudinaryResult.secure_url,
+      cloudinaryPublicId: cloudinaryResult.public_id,
       mimeType: req.file.mimetype,
       fileSizeBytes: req.file.size,
       sha256,
@@ -73,7 +81,7 @@ async function analyzeEvidence(req, res) {
     let modelSource = 'none';
 
     if (evidence.evidenceType === 'image') {
-      const result = await analyzeImageAI(evidence.storedPath);
+      const result = await analyzeImageAI(evidence.storedUrl);
       aiGenerationProbability = result.aiGenerationProbability;
       signals = signals.concat(result.signals || []);
       modelSource = 'huggingface:image-ai-detector';

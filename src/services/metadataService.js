@@ -1,24 +1,19 @@
 const exifr = require('exifr');
-const fs = require('fs');
 
 /**
- * Extracts real metadata from an image file (EXIF/GPS/software tags) without
- * ever modifying the original file. Returns null fields gracefully when
- * metadata is absent or the file type doesn't support EXIF (e.g. video/audio).
+ * Extracts real metadata from an in-memory image buffer (EXIF/GPS/software
+ * tags). Returns null fields gracefully when metadata is absent or the
+ * file type doesn't support EXIF (e.g. video/audio).
  */
-async function extractMetadata(filePath, mimeType) {
-  const stat = fs.statSync(filePath);
-  const base = {
-    fileSizeBytes: stat.size,
-    createdOnDisk: stat.birthtime,
-  };
+async function extractMetadata(buffer, mimeType, fileSizeBytes) {
+  const base = { fileSizeBytes };
 
   if (!mimeType.startsWith('image/')) {
     return { ...base, exifAvailable: false, note: 'Metadata extraction is currently supported for images only.' };
   }
 
   try {
-    const data = await exifr.parse(filePath, {
+    const data = await exifr.parse(buffer, {
       tiff: true, exif: true, gps: true, xmp: false, icc: false
     });
 
