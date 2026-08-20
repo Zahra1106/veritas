@@ -22,7 +22,7 @@ async function generateEvidenceReport(req, res) {
 
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers.host;
-    const verifyUrl = `${protocol}://${host}/api/reports/${reportId}/verify`;
+    const verifyUrl = `${protocol}://${host}/verify?reportId=${reportId}`;
 
     const { buffer, reportHash } = await buildEvidenceReportPdf({
       evidence,

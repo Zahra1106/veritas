@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const evidenceRoutes = require('./routes/evidenceRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const { renderVerifyPage } = require('./views/verifyPage');
 
 const app = express();
 
@@ -43,6 +44,13 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
 app.use('/api', apiLimiter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'veritas-backend' }));
+
+// Public, no-login page — this is what the QR code in generated PDF
+// reports links to. It calls the JSON verify API client-side.
+app.get('/verify', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(renderVerifyPage());
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/evidence', evidenceRoutes);
