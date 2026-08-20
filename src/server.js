@@ -9,6 +9,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const evidenceRoutes = require('./routes/evidenceRoutes');
 const caseRoutes = require('./routes/caseRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', service: 'veritas-back
 app.use('/api/auth', authRoutes);
 app.use('/api/evidence', evidenceRoutes);
 app.use('/api/cases', caseRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Central error handler (e.g. multer file errors)
 app.use((err, req, res, next) => {
